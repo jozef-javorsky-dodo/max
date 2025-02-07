@@ -101,6 +101,19 @@ def preprocess(image: PythonObject) -> PythonObject:
     return reshaped_image
 
 
+def argmax(t: Tensor) -> List[Int]:
+    var res = List[Int](capacity=t.dim(1))
+    for i in range(t.dim(1)):
+        var max_val = Scalar[t.type].MIN
+        var max_idx = 0
+        for j in range(t.dim(2)):
+            if t[0, i, j] > max_val:
+                max_val = t[0, i, j]
+                max_idx = j
+        res.append(max_idx)
+    return res
+
+
 def main():
     weights_dict = load_model_weights()
     fc1w = numpy_to_tensor[DType.float32](weights_dict["fc1.weight"])
@@ -132,10 +145,9 @@ def main():
         output = model.execute("input0", preprocessed_image)
         probs = output.get[DType.float32]("output0")
 
-        predicted = probs.argmax(axis=1)
+        predicted = argmax(probs)[0]
 
-        label_ = Tensor[DType.index](TensorShape(1), Int(label))
-        correct += Int(predicted == label_)
+        correct += Int(predicted == label)
         total += 1
 
     print(
