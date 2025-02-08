@@ -38,7 +38,7 @@ struct AddConstantCustom[value: Int]:
         ](idx: IndexList[x.rank]) -> SIMD[x.type, width]:
             return x.load[width](idx) + value
 
-        foreach[add_constant, False, target](out, ctx)
+        foreach[add_constant, target=target](out, ctx)
 
     # You only need to implement this if you do not manually annotate
     # output shapes in the graph.
