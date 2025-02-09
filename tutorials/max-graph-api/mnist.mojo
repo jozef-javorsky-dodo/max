@@ -11,11 +11,12 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from python import Python as py, PythonObject
-from memory import memcpy, UnsafePointer
-from max.graph import Graph, TensorType, ops
 from max import engine
+from max.graph import Graph, TensorType, ops
 from max.tensor import Tensor, TensorShape, TensorSpec
+from memory import UnsafePointer, memcpy
+from python import Python as py
+from python import PythonObject
 
 
 def load_model_weights() -> PythonObject:

@@ -12,9 +12,10 @@
 # ===----------------------------------------------------------------------=== #
 
 import compiler
-from utils.index import IndexList
 from max.tensor import ManagedTensorSlice, foreach
 from runtime.asyncrt import MojoCallContextPtr
+
+from utils.index import IndexList
 
 
 @compiler.register("add_constant_custom", num_dps_outputs=1)

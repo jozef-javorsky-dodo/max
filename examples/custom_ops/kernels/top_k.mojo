@@ -11,15 +11,17 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from math import iota
+from sys import alignof, sizeof
+
 from algorithm import parallelize_over_rows
 from bit import log2_floor
 from compiler import register
-from gpu import barrier, shuffle_down, WARP_SIZE
+from gpu import WARP_SIZE, barrier, shuffle_down
 from gpu.memory import AddressSpace, external_memory
-from math import iota
 from max.tensor import ManagedTensorSlice
 from memory import Span
-from sys import alignof, sizeof
+
 from utils.index import IndexList
 from utils.numerics import min_or_neg_inf
 

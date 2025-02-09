@@ -11,10 +11,11 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from random import seed
+
+from max.engine import InferenceSession
 from max.graph import Graph, TensorType
 from max.tensor import Tensor, TensorShape
-from random import seed
-from max.engine import InferenceSession
 
 
 def main():

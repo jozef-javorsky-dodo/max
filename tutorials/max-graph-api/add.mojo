@@ -11,8 +11,8 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from max.graph import Graph, TensorType, Type
 from max import engine
+from max.graph import Graph, TensorType, Type
 from max.tensor import Tensor
 
 

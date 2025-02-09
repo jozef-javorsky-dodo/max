@@ -11,12 +11,14 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from math import iota
+
 import compiler
 from complex import ComplexSIMD
-from math import iota
-from utils.index import IndexList
 from max.tensor import ManagedTensorSlice, foreach
 from runtime.asyncrt import MojoCallContextPtr
+
+from utils.index import IndexList
 
 
 @always_inline

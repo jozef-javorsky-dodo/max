@@ -11,12 +11,14 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from math import ceildiv
+
 from gpu import block_dim, block_idx, thread_idx
 from gpu.host import DeviceContext
-from math import ceildiv
-from utils.index import IndexList
-from tensor import ManagedTensorSlice, foreach
 from runtime.asyncrt import MojoCallContextPtr
+from tensor import ManagedTensorSlice, foreach
+
+from utils.index import IndexList
 
 
 fn _vector_addition_cpu(
