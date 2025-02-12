@@ -34,7 +34,7 @@ Parameters:
 
   HuggingFaceRepoId:
     Type: String
-    Default: modularai/llama-3.1
+    Default: modularai/Llama-3.1-8B-Instruct-GGUF
     Description: Hugging Face Repository ID for the Model.
 
 Resources:
