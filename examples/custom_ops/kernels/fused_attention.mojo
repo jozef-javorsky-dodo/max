@@ -12,9 +12,45 @@
 # ===----------------------------------------------------------------------=== #
 
 """
-The naming of variables in this file is meant to reflect the FlashAttention-2 paper.
-Read the original paper at: https://arxiv.org/pdf/2307.08691
+The code below computes the attention score for a tile of size BN x BD.
+It follows the exact arithmetic as described in the FlashAttention-2 paper
+(https://arxiv.org/pdf/2307.08691). The variable names in this program
+reflect the variable names in the algorithms from the paper.
+
+Here, the following tensors are Q for the query,
+K for the key, V for the value, and O for the output.
+
+       Q            K               V
+  +----D----+  +----D----+   +--+--BD--+---+
+  |         |  |.........|   |  |......|   |
+  |         |  |.........|   |  |......|   |
+  +---------+  |.........|   |  |......|   |
+  |.........|  |.........|   |  |......|   |
+  BN........|  N.........|   N  |......|   |
+  |.........|  |.........|   |  |......|   |
+  +---------+  |.........|   |  |......|   |
+  |         |  |.........|   |  |......|   |
+  |         |  |.........|   |  |......|   |
+  |         |  |.........|   |  |......|   |
+  +---------+  +---------+   +--+------+---+
+
+The main trick is in the softmax computation.
+As the paper says, S and P are intermediate values.
+
+Let S = Q * K^T  ∈ R^{N, D}
+    P = Softmax(S) ∈ R^{N, D}
+The attention score is O = P * V ∈ R^{N, D}.
+
+One way to think about this is to consider what happens if we
+split the dimensions N in  K, and Q into two tiles: K_1 and K_2, V_1 and V_2.
+Then we can incrementally compute the output as follows:
+  S_1 = Q * K_1, S_2 = Q * K_2
+  O_i = O_{i-1} * renormalization_factor + softmax(S_i) * V_i
+
+This allows for the incremental computation of softmax(S_i) * V_i,
+leading to the final output.
 """
+
 
 from algorithm import parallelize_over_rows
 from compiler import register
@@ -42,8 +78,8 @@ struct FusedAttention:
         //,  # Forces the previous two params to be inferred from the args
         N: Int,  # Input length
         D: Int,  # Head dimension
-        BN: Int,  # The number of blocks to split Q into
-        BD: Int,  # The number of blocks to split K and V into
+        BN: Int,  # Dimension of blocks to split Q into
+        BD: Int,  # Dimension of blocks to split K, V into
         target: StringLiteral,  # "cpu" or "gpu"
     ](
         output: ManagedTensorSlice[dtype, rank],
@@ -56,6 +92,7 @@ struct FusedAttention:
 
         # Key tensor
         K = LayoutTensor[dtype, Layout.row_major(N, D)](key.unsafe_ptr())
+        # Query tensor
         Q = LayoutTensor[dtype, Layout.row_major(N, D)](q.unsafe_ptr())
         # Value tensor
         V = LayoutTensor[dtype, Layout.row_major(N, D)](value.unsafe_ptr())
@@ -96,43 +133,29 @@ fn matmul_b_transpose(
                 ) * rebind[res.element_type](rhs[n, k].cast[res.dtype]())
 
 
-# The code below computes the attention score for a tile of size BN x BD.
-# It follows the exact arithmetic as described in the FlashAttention-2 paper
-# (https://arxiv.org/pdf/2307.08691).
-#
-#        Q            K               V
-#   +----D----+  +----D----+   +--+--BD--+---+
-#   |         |  |.........|   |  |......|   |
-#   |         |  |.........|   |  |......|   |
-#   +---------+  |.........|   |  |......|   |
-#   |.........|  |.........|   |  |......|   |
-#   BN........|  N.........|   N  |......|   |
-#   |.........|  |.........|   |  |......|   |
-#   +---------+  |.........|   |  |......|   |
-#   |         |  |.........|   |  |......|   |
-#   |         |  |.........|   |  |......|   |
-#   |         |  |.........|   |  |......|   |
-#   +---------+  +---------+   +--+------+---+
-#
-# The main trick is in the softmax computation.
-# Let S = Q * K^T  ∈ R^{N, D}
-#     P = Softmax(S) ∈ R^{N, D}
-# The attention score is O = P * V ∈ R^{N, D}.
-#
-# One way to think about this is to consider what happens if we
-# split the dimensions N in  K, and Q into two tiles: K_1 and K_2, V_1 and V_2.
-# Then we can incrementally compute the output as follows:
-#   S_1 = Q * K_1, S_2 = Q * K_2
-#   O_i = O_{i-1} * renormalization_factor + softmax(S_i) * V_i
-#
-# This allows for the incremental computation of softmax(S_i) * V_i,
-# leading to the final output.
+"""
+The bulk of the code below implements what the papers calls
+an "online softmax", which is local to each block.
+The algorithm is described as:
+
+$$$
+m_1 = rowmax(S_1)
+l_1 = rowsum(e^(S_1-m_1))
+P_1 = diag(l_1)^-1 * e^(S_1-m_1)
+O_1 = P_1*V_1 = diag(l_1)^-1 * e^(S_1-m_1) * V_1
+m_2 = max(m_1, rowmax(S_2)) = m
+l_2 = e^(m_1-m_2) * l_1 _ rowsum(e^(S_2-m_2))
+    = rowsum(e^(S_1-m)) + rowsum(e^(S_2-m)) = ls
+P_2 = diag(l_2)^-1 * e^(S_2-m_2)
+O_2 = diag(l_1/l_2)^-1 * O_1 + (P_2 * V_2)
+    = diag(l_2)^-1 * e^(S_2-m) * V
+$$$
+"""
 
 
 @always_inline
 fn fused_attention_cpu[
-    BN: Int,  # The number of blocks to split Q into
-    BD: Int,  # The number of blocks to split K and V into
+    BN: Int, BD: Int
 ](Q: LayoutTensor, K: LayoutTensor, V: LayoutTensor, mut O: LayoutTensor):
     alias N = K.shape[0]()
     alias D = K.shape[1]()
@@ -143,21 +166,18 @@ fn fused_attention_cpu[
 
         @parameter
         for tile_d in range(D // BD):
-            # To store the row max of the attention matrix S
             m_1 = (
                 LayoutTensor[Q_tile.dtype, Layout(BN, 1)]
                 .stack_allocation()
                 .fill(Scalar[Q_tile.dtype].MIN)
             )
 
-            # To store the rowsum of the e^(S_1-m_1)
             l_1 = (
                 LayoutTensor[Q_tile.dtype, Layout(BN, 1)]
                 .stack_allocation()
                 .fill(0)
             )
 
-            # To store the output
             O_i = (
                 LayoutTensor[Q_tile.dtype, Layout.row_major(BN, BD)]
                 .stack_allocation()
@@ -169,7 +189,6 @@ fn fused_attention_cpu[
                 K_tile = K.tile[BN, D](tile_n_idx, 0)
                 V_tile = V.tile[BN, BD](tile_n_idx, tile_d)
 
-                # The attention matrix
                 S = matmul_b_transpose(Q_tile, K_tile)
                 m_2 = max(m_1, rebind[__type_of(m_1)](max[axis=1](S)))
                 l_2 = exp(m_1 - m_2) * l_1 + sum[axis=1](exp(S - m_2))
@@ -265,8 +284,8 @@ fn fused_attention_kenel[
     v_layout: Layout,
     o_dtype: DType,
     o_layout: Layout,
-    BN: Int,  # The number of blocks to split Q into
-    BD: Int,  # The number of blocks to split K and V into
+    BN: Int,
+    BD: Int,
 ](
     Q: LayoutTensor[q_dtype, q_layout],
     K: LayoutTensor[k_dtype, k_layout],
@@ -307,8 +326,8 @@ fn fused_attention_kenel[
 
 
 def fused_attention_gpu[
-    BN: Int,  # The number of blocks to split Q into
-    BD: Int,  # The number of blocks to split K and V into
+    BN: Int,
+    BD: Int,
 ](
     ctx: DeviceContext,
     Q: LayoutTensor,
