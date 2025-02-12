@@ -11,6 +11,7 @@ addition = { cmd = "mojo package kernels/ -o kernels.mojopkg && python addition.
 mandelbrot = { cmd = "mojo package kernels/ -o kernels.mojopkg && python mandelbrot.py" }
 vector_addition = { cmd = "mojo package kernels/ -o kernels.mojopkg && python vector_addition.py" }
 top_k = { cmd = "mojo package kernels/ -o kernels.mojopkg && python top_k.py" }
+fused_attention = { cmd = "mojo package kernels/ -o kernels.mojopkg && python fused_attention.py" }
 
 [dependencies]
 python = ">=3.9,<3.13"

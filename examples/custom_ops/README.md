@@ -40,6 +40,7 @@ magic run addition
 magic run mandelbrot
 magic run vector_addition
 magic run top_k
+magic run fused_attention
 ```
 
 The execution has two phases: first a `kernels.mojopkg` is compiled from the
