@@ -103,13 +103,13 @@ def preprocess(image: PythonObject) -> PythonObject:
 
 
 def argmax(t: Tensor) -> List[Int]:
-    var res = List[Int](capacity=t.dim(1))
-    for i in range(t.dim(1)):
+    var res = List[Int](capacity=t.dim(0))
+    for i in range(t.dim(0)):
         var max_val = Scalar[t.type].MIN
         var max_idx = 0
-        for j in range(t.dim(2)):
-            if t[0, i, j] > max_val:
-                max_val = t[0, i, j]
+        for j in range(t.dim(1)):
+            if t[i, j] > max_val:
+                max_val = t[i, j]
                 max_idx = j
         res.append(max_idx)
     return res
