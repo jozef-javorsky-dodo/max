@@ -94,8 +94,7 @@ struct TopK:
                     WARP_SIZE,
                 )
 
-            dev_ctx.enqueue_function(
-                dev_ctx.compile_function[top_k_gpu[type, rank, K]](),
+            dev_ctx.enqueue_function[top_k_gpu[type, rank, K]](
                 in_vals,
                 out_vals,
                 out_idxs,

@@ -59,17 +59,14 @@ fn _vector_addition_gpu(
             var result = lhs.load[1](idx) + rhs.load[1](idx)
             out.store[1](idx, result)
 
-    # The GPU function is compiled for use.
-    var gpu_func = gpu_ctx.compile_function[vector_addition_gpu_kernel]()
-
     # The vector is divided up into blocks, making sure there's an extra
     # full block for any remainder.
     var num_blocks = ceildiv(vector_length, BLOCK_SIZE)
 
-    # The compiled GPU function is enqueued to run on the GPU across the
+    # The GPU function is compiled and enqueued to run on the GPU across the
     # 1-D vector, split into blocks of `BLOCK_SIZE` width.
-    gpu_ctx.enqueue_function(
-        gpu_func, vector_length, grid_dim=num_blocks, block_dim=BLOCK_SIZE
+    gpu_ctx.enqueue_function[vector_addition_gpu_kernel](
+        vector_length, grid_dim=num_blocks, block_dim=BLOCK_SIZE
     )
 
 
