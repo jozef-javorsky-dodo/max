@@ -23,7 +23,7 @@ from max.pipelines import (
     PipelineConfig,
     SupportedEncoding,
 )
-from max.pipelines.llama3.config import get_llama_huggingface_file
+from max.pipelines.architectures.llama3.config import get_llama_huggingface_file
 from shared import (
     RAG_PROMPT,
     RAG_SYSTEM_PROMPT,
