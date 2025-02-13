@@ -21,6 +21,8 @@ from gpu import WARP_SIZE, barrier, shuffle_down
 from gpu.memory import AddressSpace, external_memory
 from max.tensor import ManagedTensorSlice
 from memory import Span
+from tensor_internal import IOSpec, IOUnknown
+from compiler_internal import StaticTensorSpec
 
 from utils.index import IndexList
 from utils.numerics import min_or_neg_inf
@@ -94,7 +96,19 @@ struct TopK:
                     WARP_SIZE,
                 )
 
-            dev_ctx.enqueue_function[top_k_gpu[type, rank, K]](
+            dev_ctx.enqueue_function[
+                top_k_gpu[
+                    type,
+                    rank,
+                    K,
+                    in_vals.io_spec,
+                    out_vals.io_spec,
+                    out_idxs.io_spec,
+                    in_vals.static_spec,
+                    out_vals.static_spec,
+                    out_idxs.static_spec,
+                ]
+            ](
                 in_vals,
                 out_vals,
                 out_idxs,
@@ -117,10 +131,18 @@ fn top_k_gpu[
     T: DType,
     rank: Int,
     K: Int,
+    is1: IOSpec,
+    is2: IOSpec,
+    is3: IOSpec,
+    ss1: StaticTensorSpec[T, rank],
+    ss2: StaticTensorSpec[T, rank],
+    ss3: StaticTensorSpec[DType.int32, rank],
 ](
-    in_vals: ManagedTensorSlice[T, rank],
-    out_vals: ManagedTensorSlice[T, rank],
-    out_idxs: ManagedTensorSlice[DType.int32, rank],
+    in_vals: ManagedTensorSlice[T, rank, io_spec=is1, static_spec=ss1],
+    out_vals: ManagedTensorSlice[T, rank, io_spec=is2, static_spec=ss2],
+    out_idxs: ManagedTensorSlice[
+        DType.int32, rank, io_spec=is3, static_spec=ss3
+    ],
 ):
     var bid = block_idx.x
     var tid = thread_idx.x
