@@ -18,6 +18,7 @@ import os
 from max.entrypoints import LLM
 from max.pipelines import PipelineConfig
 from max.pipelines.architectures import register_all_models
+from max.serve.config import Settings
 
 
 def main():
@@ -26,7 +27,8 @@ def main():
     huggingface_repo_id = "modularai/Llama-3.1-8B-Instruct-GGUF"
     print(f"Loading model: {huggingface_repo_id}")
     pipeline_config = PipelineConfig(huggingface_repo_id)
-    llm = LLM(pipeline_config)
+    settings = Settings()
+    llm = LLM(settings, pipeline_config)
 
     prompts = [
         "In the beginning, there was",
