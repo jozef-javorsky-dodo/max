@@ -265,7 +265,9 @@ fn matmul[
 
             @parameter
             if transpose_b:
-                b_reg = mma_b_t.load_b(rhs.tile[N, BK](0, k_i))
+                b_reg = rebind[__type_of(b_reg)](
+                    mma_b_t.load_b(rhs.tile[N, BK](0, k_i))
+                )
 
             d_reg = mma_b_t.mma_op(a_reg, b_reg, c_reg)
             c_reg.copy_from(d_reg)
