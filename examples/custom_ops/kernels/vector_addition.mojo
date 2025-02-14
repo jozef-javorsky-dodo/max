@@ -23,8 +23,8 @@ from utils.index import IndexList
 
 fn _vector_addition_cpu(
     out: ManagedTensorSlice,
-    lhs: ManagedTensorSlice[out.type, out.rank],
-    rhs: ManagedTensorSlice[out.type, out.rank],
+    lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
+    rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
     ctx: MojoCallContextPtr,
 ):
     # Warning: This is an extremely inefficient implementation! It's merely an
@@ -39,8 +39,8 @@ fn _vector_addition_cpu(
 
 fn _vector_addition_gpu(
     out: ManagedTensorSlice,
-    lhs: ManagedTensorSlice[out.type, out.rank],
-    rhs: ManagedTensorSlice[out.type, out.rank],
+    lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
+    rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
     ctx: MojoCallContextPtr,
 ) raises:
     # Note: The following has not been tuned for any GPU hardware, and is an
@@ -80,8 +80,8 @@ struct VectorAddition:
         # as num_dps_outputs=1, the first argument is the "output"
         out: ManagedTensorSlice[rank=1],
         # starting here are the list of inputs
-        lhs: ManagedTensorSlice[out.type, out.rank],
-        rhs: ManagedTensorSlice[out.type, out.rank],
+        lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
+        rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
         ctx: MojoCallContextPtr,
     ) raises:

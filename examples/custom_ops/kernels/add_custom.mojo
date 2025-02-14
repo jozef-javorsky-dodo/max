@@ -28,7 +28,7 @@ struct AddConstantCustom[value: Int]:
         # as num_dps_outputs=1, the first argument is the "output"
         out: ManagedTensorSlice,
         # starting here are the list of inputs
-        x: ManagedTensorSlice[out.type, out.rank],
+        x: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
         ctx: MojoCallContextPtr,
     ):
@@ -60,7 +60,7 @@ struct AddOneCustom:
         # as num_dps_outputs=1, the first argument is the "output"
         out: ManagedTensorSlice,
         # starting here are the list of inputs
-        x: ManagedTensorSlice[out.type, out.rank],
+        x: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
         ctx: MojoCallContextPtr,
     ):

@@ -55,9 +55,9 @@ struct TopK:
         K: Int,
         target: StringLiteral,
     ](
-        out_vals: ManagedTensorSlice[type, rank],
-        out_idxs: ManagedTensorSlice[DType.int32, rank],
-        in_vals: ManagedTensorSlice[type, rank],
+        out_vals: ManagedTensorSlice[type=type, rank=rank],
+        out_idxs: ManagedTensorSlice[type = DType.int32, rank=rank],
+        in_vals: ManagedTensorSlice[type=type, rank=rank],
         ctx: MojoCallContextPtr,
     ) raises:
         constrained[rank == 2, "rank must be 2"]()

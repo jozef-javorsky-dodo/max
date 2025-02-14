@@ -82,10 +82,10 @@ struct FusedAttention:
         BD: Int,  # Dimension of blocks to split K, V into
         target: StringLiteral,  # "cpu" or "gpu"
     ](
-        output: ManagedTensorSlice[dtype, rank],
-        key: ManagedTensorSlice[dtype, rank],
-        q: ManagedTensorSlice[dtype, rank],
-        value: ManagedTensorSlice[dtype, rank],
+        output: ManagedTensorSlice[type=dtype, rank=rank],
+        key: ManagedTensorSlice[type=dtype, rank=rank],
+        q: ManagedTensorSlice[type=dtype, rank=rank],
+        value: ManagedTensorSlice[type=dtype, rank=rank],
         ctx: MojoCallContextPtr,
     ) raises:
         constrained[rank == 2, "rank must be 2"]()
