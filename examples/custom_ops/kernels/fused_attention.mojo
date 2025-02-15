@@ -64,6 +64,8 @@ from gpu.sync import barrier
 from gpu.memory import AddressSpace
 from utils import Index
 
+from tensor import ManagedTensorSlice
+
 
 @register("fused_attention_custom", num_dps_outputs=1)
 struct FusedAttention:
@@ -84,20 +86,20 @@ struct FusedAttention:
     ](
         output: ManagedTensorSlice[type=dtype, rank=rank],
         key: ManagedTensorSlice[type=dtype, rank=rank],
-        q: ManagedTensorSlice[type=dtype, rank=rank],
+        query: ManagedTensorSlice[type=dtype, rank=rank],
         value: ManagedTensorSlice[type=dtype, rank=rank],
         ctx: MojoCallContextPtr,
     ) raises:
         constrained[rank == 2, "rank must be 2"]()
 
         # Key tensor
-        K = LayoutTensor[dtype, Layout.row_major(N, D)](key.unsafe_ptr())
+        K = key.to_layout_tensor()
         # Query tensor
-        Q = LayoutTensor[dtype, Layout.row_major(N, D)](q.unsafe_ptr())
+        Q = query.to_layout_tensor()
         # Value tensor
-        V = LayoutTensor[dtype, Layout.row_major(N, D)](value.unsafe_ptr())
+        V = value.to_layout_tensor()
         # Attention output tensor
-        O = LayoutTensor[dtype, Layout.row_major(N, D)](output.unsafe_ptr())
+        O = output.to_layout_tensor()
 
         @parameter
         if target == "cpu":
