@@ -176,12 +176,30 @@ def main():
     input_tensor = Tensor.from_numpy(probabilities).to(device)
 
     print(f"Sampling top k: {K} for batch size: {batch_size}")
+
     if args.stress_test > 0:
-        # Run the model on the target device and benchmark execution
-        start_time = time.perf_counter()
-        values, indices = model.execute(input_tensor)
-        execution_time = (time.perf_counter() - start_time) * 1000
-        print(f"Stress test model execution time: {execution_time:.3f} ms")
+        iterations = 500
+        print(f"Running stress test for {iterations} iterations.")
+
+        times = []
+
+        # Warm-up iteration to mitigate initialization overhead
+        model.execute(input_tensor)
+
+        for i in range(iterations):
+            start_time = time.perf_counter()
+            values, indices = model.execute(input_tensor)
+            elapsed_time = (time.perf_counter() - start_time) * 1000
+            times.append(elapsed_time)
+
+        if times:
+            avg_time = sum(times) / len(times)
+            print(
+                f"Average inference time over {len(times)} iterations: {avg_time:.3f} ms"
+            )
+        else:
+            print("No iterations executed successfully.")
+
         return
     else:
         values, indices = model.execute(input_tensor)

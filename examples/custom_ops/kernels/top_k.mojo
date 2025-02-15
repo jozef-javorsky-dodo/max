@@ -86,9 +86,10 @@ struct TopK:
             # Finish packing the values across threads in this block before the next step
             barrier()
 
+            @parameter
             for i in range(K):
                 var reduced = top_k_sram[tid]
-                alias limit = log2_floor(WARP_SIZE)
+                alias limit = log2_floor(K)
 
                 # TODO(KERN-1544): allow gpu.shuffle.warp_max to be used with index and value
                 @parameter
@@ -118,7 +119,6 @@ struct TopK:
         @parameter
         if target == "gpu":
             var dev_ctx = ctx.get_device_context()
-            print("Running on GPU:", dev_ctx.name())
             # This is a simplified version of top_k that only works for K being
             # under the warp size. The MAX "mo.top_k" op supports any K and
             # does another reduction after each warp has reduced it's values.
@@ -139,7 +139,6 @@ struct TopK:
                 shared_mem_bytes=K * sizeof[TopKElement[type]](),
             )
         else:
-            print("Running on CPU")
 
             @parameter
             fn process_rows(start_row: Int, end_row: Int):
