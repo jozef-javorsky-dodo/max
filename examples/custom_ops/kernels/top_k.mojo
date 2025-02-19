@@ -12,7 +12,7 @@
 # ===----------------------------------------------------------------------=== #
 
 from math import iota
-from sys import alignof, sizeof
+from sys import alignof, sizeof, num_physical_cores
 
 from algorithm import parallelize_over_rows
 from bit import log2_floor
@@ -21,6 +21,7 @@ from gpu import WARP_SIZE, barrier, shuffle_down
 from gpu.memory import AddressSpace, external_memory
 from max.tensor import ManagedTensorSlice
 from memory import Span
+from benchmark import Bench, Bencher, BenchId, BenchMetric, ThroughputMeasure
 
 from utils.index import IndexList
 from utils.numerics import min_or_neg_inf
@@ -62,6 +63,10 @@ struct TopK:
     ) raises:
         constrained[rank == 2, "rank must be 2"]()
         var shape = in_vals.shape()
+        var batch_size = shape[0]
+
+        var dev_ctx = ctx.get_device_context()
+        print("Executing on device:", dev_ctx.name())
 
         @parameter
         fn top_k_gpu[
@@ -74,16 +79,16 @@ struct TopK:
             var bid = block_idx.x
             var tid = thread_idx.x
 
-            # Get a pointer to shared memory in this block for the indices and values
+            # Get a pointer to shared memory for the indices and values
             var top_k_sram = external_memory[
                 TopKElement[type],
                 address_space = AddressSpace.SHARED,
                 alignment = alignof[TopKElement[type]](),
             ]()
 
-            # Each thread puts its corresponding index and value into shared memory
+            # Threads put their corresponding index and value into shared memory
             top_k_sram[tid] = TopKElement[type](tid, in_vals[bid, tid])
-            # Finish packing the values across threads in this block before the next step
+            # Finish packing the values across threads in this block
             barrier()
 
             @parameter
@@ -91,77 +96,131 @@ struct TopK:
                 var reduced = top_k_sram[tid]
                 alias limit = log2_floor(K)
 
-                # TODO(KERN-1544): allow gpu.shuffle.warp_max to be used with index and value
+                # TODO(KERN-1544): `gpu.shuffle.warp_max` support index/value
                 @parameter
                 for j in reversed(range(limit)):
                     alias offset = 1 << j
-                    # Parallel reduction using warp shuffle. Each thread gets a value
-                    # from a thread 'offset' positions higher, keeping the larger value.
+                    # Parallel reduction using warp shuffle. Each thread gets a
+                    # value from a thread 'offset' positions higher, keeping the
+                    # larger value.
                     var shuffled = TopKElement[type](
                         shuffle_down(reduced.idx, offset),
                         shuffle_down(reduced.val, offset),
                     )
                     reduced = max(reduced, shuffled)
 
-                # Wait for all threads to finish reducing their values for this index
+                # Wait for all threads to finish reducing their values
                 barrier()
 
-                # Thread 0 now has the reduced max value for this index in the batch
+                # Thread 0 now has the reduced max value for this index
                 if tid == 0:
-                    # Store the reduced top_k index and value in global memory for the CPU
+                    # Store the reduced top_k index and value in global memory
                     out_vals[bid, i] = reduced.val
                     out_idxs[bid, i] = reduced.idx
 
-                    # Remove the found maximum from consideration in the next iteration
+                    # Remove found maximum from consideration in the next iter
                     var index = reduced.idx % block_dim.x
                     top_k_sram[index].val = min_or_neg_inf[type]()
 
         @parameter
-        if target == "gpu":
-            var dev_ctx = ctx.get_device_context()
-            # This is a simplified version of top_k that only works for K being
-            # under the warp size. The MAX "mo.top_k" op supports any K and
-            # does another reduction after each warp has reduced it's values.
-            if K > WARP_SIZE:
-                raise Error(
-                    "[top_k_custom] K=",
-                    K,
-                    " but must be less than or equal to WARP_SIZE=",
-                    WARP_SIZE,
-                )
+        fn top_k_cpu(start_idx: Int, end_idx: Int):
+            for row_idx in range(start_idx, end_idx):
+                var offset = (row_idx * K)
+                iota(out_idxs.unsafe_ptr() + offset, K)
 
-            dev_ctx.enqueue_function[top_k_gpu[K]](
-                out_vals,
-                out_idxs,
-                in_vals,
-                grid_dim=shape[0],  # One block per batch
-                block_dim=K,
-                shared_mem_bytes=K * sizeof[TopKElement[type]](),
-            )
-        else:
-
-            @parameter
-            fn process_rows(start_row: Int, end_row: Int):
-                # Total amount of elements to find top k for
-
-                for row_idx in range(start_row, end_row):
-                    var offset = (row_idx * K)
-                    iota(out_idxs.unsafe_ptr() + offset, K)
-
-                    @parameter
-                    fn val_greater_than(lhs: Int32, rhs: Int32) -> Bool:
-                        return (
-                            in_vals[row_idx, Int(lhs)]
-                            > in_vals[row_idx, Int(rhs)]
-                        )
-
-                    sort[val_greater_than](
-                        Span(out_idxs.unsafe_ptr() + offset, K)
+                @parameter
+                fn val_greater_than(lhs: Int32, rhs: Int32) -> Bool:
+                    return (
+                        in_vals[row_idx, Int(lhs)] > in_vals[row_idx, Int(rhs)]
                     )
 
-                    for i in range(K):
-                        var sorted_idx = Int(out_idxs[row_idx, i])
-                        out_vals[row_idx, i] = in_vals[row_idx, sorted_idx]
+                sort[val_greater_than](Span(out_idxs.unsafe_ptr() + offset, K))
 
-            # Set grain size to 1 to put each batch in a separate task
-            parallelize_over_rows[process_rows](shape, 1, grain_size=1)
+                for i in range(K):
+                    var sorted_idx = Int(out_idxs[row_idx, i])
+                    out_vals[row_idx, i] = in_vals[row_idx, sorted_idx]
+
+        if batch_size <= 10:
+            if target == "gpu":
+                # This is a simplified version that only works for K being under
+                # the warp size. The MAX "mo.top_k" op supports any K and does
+                # another reduction after each warp has reduced its values.
+                if K > WARP_SIZE:
+                    raise Error(
+                        "[top_k_custom] K=",
+                        K,
+                        " but must be less than or equal to WARP_SIZE=",
+                        WARP_SIZE,
+                    )
+
+                if shape[0] <= 10:
+                    dev_ctx.enqueue_function[top_k_gpu[K]](
+                        out_vals,
+                        out_idxs,
+                        in_vals,
+                        grid_dim=batch_size,  # One block per batch
+                        block_dim=K,  # One thread per K
+                        shared_mem_bytes=K * sizeof[TopKElement[type]](),
+                    )
+            elif target == "cpu":
+                print("Executing on CPU")
+                # Set grain size to 1 to put each batch in a separate task
+                parallelize_over_rows[top_k_cpu](shape, 1, grain_size=1)
+
+        # Everything below is for benchmarking when running a stress test
+        else:
+            var bench = Bench()
+
+            @parameter
+            @always_inline
+            fn bench_gpu(mut b: Bencher, shape: IndexList[rank]) raises:
+                @parameter
+                @always_inline
+                fn kernel_launch(dev_ctx: DeviceContext) raises:
+                    dev_ctx.enqueue_function[top_k_gpu[K]](
+                        out_vals,
+                        out_idxs,
+                        in_vals,
+                        grid_dim=batch_size,  # One block per batch
+                        block_dim=K,  # One thread per K
+                        shared_mem_bytes=K * sizeof[TopKElement[type]](),
+                    )
+
+                b.iter_custom[kernel_launch](ctx.get_device_context())
+
+            @parameter
+            @always_inline
+            fn bench_cpu(mut b: Bencher) raises:
+                var grain = 1
+                # Split job up evenly across physical cores on large batch
+                if batch_size > 1000:
+                    grain = batch_size // num_physical_cores()
+
+                @parameter
+                fn run_bench():
+                    parallelize_over_rows[top_k_cpu](shape, 1, grain_size=grain)
+
+                b.iter[run_bench]()
+
+            var els = ThroughputMeasure(
+                BenchMetric.elements, shape.flattened_length()
+            )
+            var flops = ThroughputMeasure(
+                BenchMetric.flops, shape.flattened_length() * log2_floor(K)
+            )
+
+            # Only benchmark GPU if it's available
+            if target == "gpu":
+                bench.bench_with_input[IndexList[rank], bench_gpu](
+                    BenchId("top_k_custom", "gpu"), shape, els, flops
+                )
+
+            # TODO: Always benchmark CPU to compare with GPU
+            else:
+                bench.bench_function[bench_cpu](
+                    BenchId("top_k_custom", "cpu"), els, flops
+                )
+
+            bench.config.verbose_metric_names = False
+            bench.config.verbose_timing = True
+            print(bench)

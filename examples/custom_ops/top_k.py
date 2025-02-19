@@ -12,7 +12,6 @@
 # ===----------------------------------------------------------------------=== #
 import argparse
 import os
-import time
 from collections import defaultdict
 from pathlib import Path
 from typing import DefaultDict
@@ -115,6 +114,11 @@ def main():
             "On NVIDIA A100, 250_000_000 takes less than 0.5ms and uses over 75%% of its memory."
         ),
     )
+    parser.add_argument(
+        "--cpu",
+        action="store_true",
+        help="Run on CPU even if there is a GPU available.",
+    )
     args = parser.parse_args()
 
     # This is necessary only for Modular internal CI.
@@ -164,7 +168,7 @@ def main():
         graph.output(*results)
 
     # Place the graph on a GPU, if available. Fall back to CPU if not.
-    device = CPU() if accelerator_count() == 0 else Accelerator()
+    device = CPU() if args.cpu or accelerator_count() == 0 else Accelerator()
 
     # Set up an inference session for running the graph.
     session = InferenceSession(devices=[device], custom_extensions=path)
@@ -177,32 +181,10 @@ def main():
 
     print(f"Sampling top k: {K} for batch size: {batch_size}")
 
+    values, indices = model.execute(input_tensor)
+
     if args.stress_test > 0:
-        iterations = 500
-        print(f"Running stress test for {iterations} iterations.")
-
-        times = []
-
-        # Warm-up iteration to mitigate initialization overhead
-        model.execute(input_tensor)
-
-        for i in range(iterations):
-            start_time = time.perf_counter()
-            values, indices = model.execute(input_tensor)
-            elapsed_time = (time.perf_counter() - start_time) * 1000
-            times.append(elapsed_time)
-
-        if times:
-            avg_time = sum(times) / len(times)
-            print(
-                f"Average inference time over {len(times)} iterations: {avg_time:.3f} ms"
-            )
-        else:
-            print("No iterations executed successfully.")
-
         return
-    else:
-        values, indices = model.execute(input_tensor)
 
     # Copy values and indices back to the CPU to be read.
     assert isinstance(values, Tensor)
