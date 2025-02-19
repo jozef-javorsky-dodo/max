@@ -141,6 +141,8 @@ struct TopK:
                     out_vals[row_idx, i] = in_vals[row_idx, sorted_idx]
 
         if batch_size <= 10:
+
+            @parameter
             if target == "gpu":
                 # This is a simplified version that only works for K being under
                 # the warp size. The MAX "mo.top_k" op supports any K and does
@@ -162,8 +164,7 @@ struct TopK:
                         block_dim=K,  # One thread per K
                         shared_mem_bytes=K * sizeof[TopKElement[type]](),
                     )
-            elif target == "cpu":
-                print("Executing on CPU")
+            else:
                 # Set grain size to 1 to put each batch in a separate task
                 parallelize_over_rows[top_k_cpu](shape, 1, grain_size=1)
 
@@ -210,6 +211,7 @@ struct TopK:
             )
 
             # Only benchmark GPU if it's available
+            @parameter
             if target == "gpu":
                 bench.bench_with_input[IndexList[rank], bench_gpu](
                     BenchId("top_k_custom", "gpu"), shape, els, flops
