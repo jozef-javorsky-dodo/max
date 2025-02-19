@@ -24,9 +24,9 @@ from max.serve.config import Settings
 def main():
     register_all_models()
 
-    huggingface_repo_id = "modularai/Llama-3.1-8B-Instruct-GGUF"
-    print(f"Loading model: {huggingface_repo_id}")
-    pipeline_config = PipelineConfig(huggingface_repo_id)
+    model_path = "modularai/Llama-3.1-8B-Instruct-GGUF"
+    print(f"Loading model: {model_path}")
+    pipeline_config = PipelineConfig(model_path)
     settings = Settings()
     llm = LLM(settings, pipeline_config)
 

@@ -34,7 +34,7 @@ tool.
 3. Serve a model.
 
    ```shell
-   max-pipelines serve --huggingface-repo-id deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+   max-pipelines serve --model-path deepseek-ai/DeepSeek-R1-Distill-Llama-8B
    ```
 
 See [https://builds.modular.com/](https://builds.modular.com/) to discover many

@@ -221,7 +221,7 @@ Resources:
             -p 80:8000 \
             --ipc=host \
             docker.modular.com/modular/max-openai-api:latest \
-            --huggingface-repo-id ${HuggingFaceRepoId})
+            --model-path ${HuggingFaceRepoId})
 
           if [ $? -ne 0 ]; then
             echo "Failed to start container"

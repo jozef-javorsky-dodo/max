@@ -96,7 +96,7 @@ resources:
             -p 80:8000 \
             --ipc host \
             docker.modular.com/modular/max-openai-api:latest \
-            --huggingface-repo-id {{ properties['huggingFaceRepoId'] }}
+            --model-path {{ properties['huggingFaceRepoId'] }}
 
 # Add firewall rule directly in template
 - name: allow-http

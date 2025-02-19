@@ -6,7 +6,7 @@ search through documents semantically.
 1. Start the embeddings endpoint:
 
     ```bash
-    max-pipelines serve --huggingface-repo-id=sentence-transformers/all-mpnet-base-v2
+    max-pipelines serve --model-path=sentence-transformers/all-mpnet-base-v2
     ```
 
 1. Run the system:
