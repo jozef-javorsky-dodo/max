@@ -94,7 +94,7 @@ struct TopK:
             @parameter
             for i in range(K):
                 var reduced = top_k_sram[tid]
-                alias limit = log2_floor(K)
+                alias limit = log2_floor(WARP_SIZE)
 
                 # TODO(KERN-1544): `gpu.shuffle.warp_max` support index/value
                 @parameter
