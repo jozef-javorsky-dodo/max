@@ -87,7 +87,7 @@ struct TopK:
             ]()
 
             # Threads put their corresponding index and value into shared memory
-            top_k_sram[tid] = TopKElement[type](tid, in_vals[bid, tid])
+            top_k_sram[tid] = TopKElement(tid, in_vals[bid, tid])
             # Finish packing the values across threads in this block
             barrier()
 
@@ -103,7 +103,7 @@ struct TopK:
                     # Parallel reduction using warp shuffle. Each thread gets a
                     # value from a thread 'offset' positions higher, keeping the
                     # larger value.
-                    var shuffled = TopKElement[type](
+                    var shuffled = TopKElement(
                         shuffle_down(reduced.idx, offset),
                         shuffle_down(reduced.val, offset),
                     )
@@ -147,15 +147,15 @@ struct TopK:
                 # This is a simplified version that only works for K being under
                 # the warp size. The MAX "mo.top_k" op supports any K and does
                 # another reduction after each warp has reduced its values.
-                if K > WARP_SIZE:
+                if K >= WARP_SIZE:
                     raise Error(
                         "[top_k_custom] K=",
                         K,
-                        " but must be less than or equal to WARP_SIZE=",
+                        " but must be less than the WARP_SIZE=",
                         WARP_SIZE,
                     )
 
-                if shape[0] <= 10:
+                if K < WARP_SIZE:
                     dev_ctx.enqueue_function[top_k_gpu[K]](
                         out_vals,
                         out_idxs,
