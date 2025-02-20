@@ -17,7 +17,8 @@ from sys import alignof, sizeof, num_physical_cores
 from algorithm import parallelize_over_rows
 from bit import log2_floor
 from compiler import register
-from gpu import WARP_SIZE, barrier, shuffle_down
+from gpu import WARP_SIZE, barrier
+import gpu.warp as warp
 from gpu.memory import AddressSpace, external_memory
 from max.tensor import ManagedTensorSlice
 from memory import Span
@@ -104,8 +105,8 @@ struct TopK:
                     # value from a thread 'offset' positions higher, keeping the
                     # larger value.
                     var shuffled = TopKElement(
-                        shuffle_down(reduced.idx, offset),
-                        shuffle_down(reduced.val, offset),
+                        warp.shuffle_down(reduced.idx, offset),
+                        warp.shuffle_down(reduced.val, offset),
                     )
                     reduced = max(reduced, shuffled)
 
