@@ -44,7 +44,7 @@ First enter the local virtual environment:
 ```cd
 git clone -b stable https://github.com/modular/max.git
 
-cd max/pipelines/python/max/entrypoints/benchmarking
+cd max/benchmark
 
 magic shell
 ```

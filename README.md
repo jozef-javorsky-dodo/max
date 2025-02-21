@@ -46,10 +46,10 @@ git checkout stable
 ### MAX Pipelines
 
 To show off the full power of MAX, a
-[series of end-to-end pipelines for common AI workloads](./pipelines/python/)
+[series of end-to-end pipelines for common AI workloads](./src/max/pipelines/)
 (and more) are ready to run. As one example, this includes everything needed to
 self-host
-[the Llama 3.1 text-generation model](./pipelines/python/max/pipelines/architectures/llama3/).
+[the Llama 3.1 text-generation model](./src/max/pipelines/architectures/llama3/).
 All code is provided so that these pipelines can be customized, built upon, or
 learned from.
 
