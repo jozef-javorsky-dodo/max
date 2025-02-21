@@ -16,7 +16,7 @@ from math import iota
 import compiler
 from complex import ComplexSIMD
 from max.tensor import ManagedTensorSlice, foreach
-from runtime.asyncrt import MojoCallContextPtr
+from runtime.asyncrt import DeviceContextPtr
 
 from utils.index import IndexList
 
@@ -61,7 +61,7 @@ struct Mandelbrot:
         scale_y: Float32,
         max_iterations: Int32,
         # the context is needed for some GPU calls
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ):
         @parameter
         @always_inline

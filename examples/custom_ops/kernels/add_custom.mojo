@@ -13,7 +13,7 @@
 
 import compiler
 from max.tensor import ManagedTensorSlice, foreach
-from runtime.asyncrt import MojoCallContextPtr
+from runtime.asyncrt import DeviceContextPtr
 
 from utils.index import IndexList
 
@@ -30,7 +30,7 @@ struct AddConstantCustom[value: Int]:
         # starting here are the list of inputs
         x: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ):
         @parameter
         @always_inline
@@ -62,7 +62,7 @@ struct AddOneCustom:
         # starting here are the list of inputs
         x: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ):
         @parameter
         @always_inline

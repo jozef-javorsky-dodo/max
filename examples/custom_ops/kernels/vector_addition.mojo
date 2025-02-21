@@ -15,7 +15,7 @@ from math import ceildiv
 
 from gpu import block_dim, block_idx, thread_idx
 from gpu.host import DeviceContext
-from runtime.asyncrt import MojoCallContextPtr
+from runtime.asyncrt import DeviceContextPtr
 from tensor import ManagedTensorSlice, foreach
 
 from utils.index import IndexList
@@ -25,7 +25,7 @@ fn _vector_addition_cpu(
     out: ManagedTensorSlice,
     lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
     rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
-    ctx: MojoCallContextPtr,
+    ctx: DeviceContextPtr,
 ):
     # Warning: This is an extremely inefficient implementation! It's merely an
     # instructional example of how a dedicated CPU-only path can be specified
@@ -41,7 +41,7 @@ fn _vector_addition_gpu(
     out: ManagedTensorSlice,
     lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
     rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
-    ctx: MojoCallContextPtr,
+    ctx: DeviceContextPtr,
 ) raises:
     # Note: The following has not been tuned for any GPU hardware, and is an
     # instructional example for how a simple GPU function can be constructed
@@ -83,7 +83,7 @@ struct VectorAddition:
         lhs: ManagedTensorSlice[type = out.type, rank = out.rank],
         rhs: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ) raises:
         # For a simple elementwise operation like this, the `foreach` function
         # does much more rigorous hardware-specific tuning. We recommend using

@@ -88,7 +88,7 @@ struct FusedAttention:
         key: ManagedTensorSlice[type=dtype, rank=rank],
         query: ManagedTensorSlice[type=dtype, rank=rank],
         value: ManagedTensorSlice[type=dtype, rank=rank],
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ) raises:
         constrained[rank == 2, "rank must be 2"]()
 

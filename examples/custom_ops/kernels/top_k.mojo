@@ -60,7 +60,7 @@ struct TopK:
         out_vals: ManagedTensorSlice[type=type, rank=rank],
         out_idxs: ManagedTensorSlice[type = DType.int32, rank=rank],
         in_vals: ManagedTensorSlice[type=type, rank=rank],
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ) raises:
         constrained[rank == 2, "rank must be 2"]()
         var shape = in_vals.shape()
