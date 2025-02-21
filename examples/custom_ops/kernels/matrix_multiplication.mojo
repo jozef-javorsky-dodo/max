@@ -25,7 +25,7 @@ from layout.tensor_builder import LayoutTensorBuild as tb
 from layout.tensor_core import TensorCore
 from math import ceildiv
 from memory import UnsafePointer
-from runtime.asyncrt import MojoCallContextPtr
+from runtime.asyncrt import DeviceContextPtr
 from sys.info import simdwidthof
 from tensor import ManagedTensorSlice, foreach
 from utils.index import Index
@@ -786,7 +786,7 @@ struct MatrixMultiplication[algorithm: StringLiteral]:
         a: ManagedTensorSlice[type = out.type, rank = out.rank],
         b: ManagedTensorSlice[type = out.type, rank = out.rank],
         # the context is needed for some GPU calls
-        ctx: MojoCallContextPtr,
+        ctx: DeviceContextPtr,
     ) raises:
         # At graph compilation time, we will know what device we are compiling
         # this operation for, so we can specialize it for the target hardware.
