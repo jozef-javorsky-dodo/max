@@ -4,15 +4,20 @@
 > This is a preview of an interface for writing custom operations in Mojo,
 > and may be subject to change before the next stable release.
 
-Graphs in MAX can be extended to use custom operations written in Mojo. Four
-examples of this are shown here:
+Graphs in MAX can be extended to use custom operations written in Mojo. The
+following examples are shown here:
 
-- Adding 1 to every element of an input tensor.
-- Calculating the Mandelbrot set.
-- Performing vector addition using a manual GPU function.
-- A top-K token sampler, a complex operation that shows a real-world use case
-  for a custom operation used today within a large language model processing
-  pipeline.
+- **addition**: Adding 1 to every element of an input tensor.
+- **mandelbrot**: Calculating the Mandelbrot set.
+- **vector_addition**: Performing vector addition using a manual GPU function.
+- **top_k**: A top-K token sampler, a complex operation that shows a real-world
+  use case for a custom operation used today within a large language model
+  processing pipeline.
+- **matrix_multiplication**: Various matrix multiplication algorithms, using a
+  memory layout abstraction.
+- **fused_attention**: A fused attention operation, which leverages many of the
+  available MAX GPU programming features to show how to address an important
+  use case in AI models.
 
 Custom kernels have been written in Mojo to carry out these calculations. For
 each example, a simple graph containing a single operation is constructed
@@ -29,9 +34,9 @@ MAX abstractions, where compile-time specialization lets MAX choose the optimal
 code path for a given hardware architecture.
 
 The `kernels/` directory contains the custom kernel implementations, and the
-graph construction occurs in `addition.py`, `mandelbrot.py`, or
-`vector_addition.py`. These examples are designed to stand on their own, so
-that they can be used as templates for experimentation.
+graph construction occurs in the Python files in the base directory. These
+examples are designed to stand on their own, so that they can be used as
+templates for experimentation.
 
 A single Magic command runs each of the examples:
 
@@ -40,6 +45,7 @@ magic run addition
 magic run mandelbrot
 magic run vector_addition
 magic run top_k
+magic run matrix_multiplication
 magic run fused_attention
 ```
 
